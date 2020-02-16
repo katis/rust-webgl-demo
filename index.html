@@ -1,0 +1,48 @@
+<html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+    <title>Rust WebGL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: black;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+    </style>
+    <script defer type="module">
+        import init from './pkg/webgl_game.js';
+
+        const canvas = document.getElementById('view');
+
+        const ratio = 16 / 9;
+
+        function setCanvasSize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerWidth / ratio;
+        }
+
+        window.addEventListener("resize", setCanvasSize);
+
+        setCanvasSize();
+
+        init()
+    </script>
+</head>
+<body>
+
+<canvas id="view"></canvas>
+
+</body>
+</html>
