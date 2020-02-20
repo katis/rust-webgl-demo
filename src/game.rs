@@ -2,9 +2,11 @@ use std::rc::Rc;
 
 use js_sys::{Float32Array, Uint16Array};
 use std::marker::PhantomData;
+use vek::Vec2;
 use web_sys::{WebGlBuffer, WebGlProgram, WebGlRenderingContext, WebGlShader};
 
-use crate::gl::{Buffer, Gl, Program, Shader};
+use crate::gl::{Buffer, Gl, Image, Program, Shader};
+use crate::sprites::Sprites;
 use crate::utils;
 
 static VERT: &'static str = include_str!("./quad.vert");
@@ -13,35 +15,27 @@ static FRAG: &'static str = include_str!("./quad.frag");
 
 pub struct Game {
     gl: Rc<Gl>,
+    sprites: Sprites,
+    image: Image,
     program: Program,
-    vertex_buffer: Buffer,
-    index_buffer: Buffer,
 }
 
 impl Game {
-    pub fn new(gl: Rc<Gl>) -> Game {
+    pub fn new(gl: Rc<Gl>, image: Image) -> Game {
         let vert = Shader::compile(gl.clone(), Gl::VERTEX_SHADER, VERT);
         let frag = Shader::compile(gl.clone(), Gl::FRAGMENT_SHADER, FRAG);
 
         let program = Program::compile(gl.clone(), &[vert, frag]);
 
-        let vertices: [f32; 12] = [
-            -0.5, 0.5, 0.0, -0.5, -0.5, 0.0, 0.5, -0.5, 0.0, 0.5, 0.5, 0.0,
-        ];
-
-        let indices = [3, 2, 1, 3, 1, 0];
-
-        let vertex_buffer = Buffer::new(gl.clone(), Gl::ARRAY_BUFFER);
-        vertex_buffer.bind().update_f32(&vertices, Gl::STATIC_DRAW);
-
-        let index_buffer = Buffer::new(gl.clone(), Gl::ELEMENT_ARRAY_BUFFER);
-        index_buffer.bind().update_u16(&indices, Gl::STATIC_DRAW);
+        let mut sprites = Sprites::new(gl.clone());
+        sprites.add(Vec2::new(0.5, 0.));
+        sprites.add(Vec2::new(0.1, 0.4));
 
         Game {
             gl,
+            sprites,
+            image,
             program,
-            vertex_buffer,
-            index_buffer,
         }
     }
 
@@ -50,23 +44,23 @@ impl Game {
     }
 
     pub fn draw(&mut self) {
+        self.sprites.apply();
+
         self.gl.clear_color(0.945, 0.953, 0.957, 1.0);
 
         self.gl.enable(Gl::DEPTH_TEST);
         self.gl.clear(Gl::COLOR_BUFFER_BIT);
 
         self.program.use_program();
-        self.vertex_buffer.bind();
-        self.index_buffer.bind();
 
+        let texcoord_loc = self.program.get_attrib_location("texcoord");
         let coordinates_loc = self.program.get_attrib_location("coordinates");
+        let texture_uni = self.gl.get_uniform_location(&self.program, "texture");
 
-        self.gl
-            .vertex_attrib_pointer_with_i32(coordinates_loc, 3, Gl::FLOAT, false, 0, 0);
+        self.gl.active_texture(Gl::TEXTURE0);
+        self.gl.bind_texture(Gl::TEXTURE_2D, Some(&self.image));
+        self.gl.uniform1i(texture_uni.as_ref(), 0);
 
-        self.gl.enable_vertex_attrib_array(coordinates_loc);
-
-        self.gl
-            .draw_elements_with_i32(Gl::TRIANGLES, 6, Gl::UNSIGNED_SHORT, 0);
+        self.sprites.draw(coordinates_loc, texcoord_loc);
     }
 }

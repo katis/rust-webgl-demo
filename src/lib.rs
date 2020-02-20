@@ -4,15 +4,17 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{console, WebGlRenderingContext};
+use web_sys::{console, HtmlImageElement, WebGlRenderingContext};
 
 use crate::data::Size;
+use crate::gl::Image;
 
 #[macro_use]
 mod utils;
 mod data;
 mod game;
 mod gl;
+mod sprites;
 
 fn window() -> web_sys::Window {
     web_sys::window().expect("no global `window` exists")
@@ -24,8 +26,8 @@ fn request_animation_frame(closure: &Closure<dyn FnMut()>) {
         .expect("should register 'requestAnimationFrame OK'");
 }
 
-#[wasm_bindgen(start)]
-pub fn start() {
+#[wasm_bindgen]
+pub fn start(img: HtmlImageElement) {
     crate::utils::set_panic_hook();
 
     let frame = Rc::new(RefCell::new(None));
@@ -43,7 +45,11 @@ pub fn start() {
         .dyn_into()
         .unwrap();
 
-    let mut game = crate::game::Game::new(Rc::new(context));
+    let gl = Rc::new(context);
+
+    let image = Image::from_image_element(gl.clone(), &img);
+
+    let mut game = crate::game::Game::new(gl.clone(), image);
 
     let mut canvas_size = get_canvas_size(&canvas);
 

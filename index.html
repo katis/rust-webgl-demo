@@ -22,7 +22,7 @@
         }
     </style>
     <script defer type="module">
-        import init from './pkg/webgl_game.js';
+        import init, { start } from './pkg/webgl_game.js';
 
         const canvas = document.getElementById('view');
 
@@ -30,17 +30,35 @@
 
         function setCanvasSize() {
             canvas.width = window.innerWidth;
-            canvas.height = window.innerWidth / ratio;
+            canvas.height = window.innerWidth;
+        }
+
+        function loadImage(src) {
+            return new Promise(resolve => {
+                const img = new Image();
+
+                img.onload = () => {
+                    resolve(img)
+                };
+
+                img.src = src
+            })
+
         }
 
         window.addEventListener("resize", setCanvasSize);
 
         setCanvasSize();
 
-        init()
+        Promise.all([
+            init(),
+            loadImage('/assets/images/player.png')
+        ])
+            .then((args) => start(args[1]));
+
     </script>
 </head>
-<body>
+<img>
 
 <canvas id="view"></canvas>
 
