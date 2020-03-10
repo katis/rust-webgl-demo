@@ -57,17 +57,8 @@ impl Transform {
             Vec2::new(image.width as f32 / 2., 0.),
         )
     }
-
-    pub fn vertices(&self, center: &Vec2<f32>) -> [Vec2<f32>; 4] {
-        let Transform { up, right } = self;
-        [
-            center - up - right,
-            center - up + right,
-            center + up + right,
-            center + up - right,
-        ]
-    }
 }
+
 #[repr(C)]
 #[derive(Debug)]
 struct Vertex {
@@ -83,20 +74,20 @@ impl VertexData {
     fn new(position: &Vec2<f32>, Transform { up, right }: &Transform) -> Self {
         VertexData([
             Vertex {
-                vertex: position - up - right,
+                vertex: position + up - right,
                 texcoord: Vec2::new(0.0f32, 0.0),
             },
             Vertex {
-                vertex: position - up + right,
+                vertex: position + up + right,
+                texcoord: Vec2::new(1.0f32, 0.0),
+            },
+            Vertex {
+                vertex: position - up - right,
                 texcoord: Vec2::new(0.0f32, 1.0),
             },
             Vertex {
-                vertex: position + up + right,
+                vertex: position - up + right,
                 texcoord: Vec2::new(1.0f32, 1.0),
-            },
-            Vertex {
-                vertex: position + up - right,
-                texcoord: Vec2::new(1.0f32, 0.0),
             },
         ])
     }
@@ -320,7 +311,8 @@ impl SpriteBatch {
         let mut indices = self.index_buffer.bind();
         for i in 0..self.len {
             let n = (i * 4) as u16;
-            let indexes = [n, n + 2, n + 1, n, n + 3, n + 2];
+
+            let indexes = [n, n + 1, n + 2, n + 2, n + 3, n + 1];
             indices.update_sub(&[indexes], i);
         }
     }
