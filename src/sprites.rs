@@ -1,36 +1,21 @@
-use crate::gl::{BoundBuffer, Buffer, Gl, Image};
+use specs::prelude::*;
 use std::mem;
 use std::rc::Rc;
 use vek::Vec2;
 
-type Sprite = u32;
+use crate::gl::{BoundBuffer, Buffer, Gl, Image};
+
 type Radians = f32;
-
-pub struct Transform {
-    up: Vec2<f32>,
-    right: Vec2<f32>,
-}
-
-impl Transform {
-    pub fn vertices(&self, center: &Vec2<f32>) -> [Vec2<f32>; 4] {
-        let Transform { up, right } = self;
-        [
-            center - up - right,
-            center - up + right,
-            center + up + right,
-            center + up - right,
-        ]
-    }
-}
 
 pub struct Sprites {
     gl: Rc<Gl>,
 
     needs_resize: bool,
 
+    /*
     positions: Vec<Vec2<f32>>,
     transforms: Vec<Transform>,
-
+    */
     uv_buffer: Buffer,
     vertex_buffer: Buffer,
     index_buffer: Buffer,
@@ -42,9 +27,10 @@ impl Sprites {
         Sprites {
             gl: gl.clone(),
             needs_resize: false,
+            /*
             positions: Vec::new(),
             transforms: Vec::new(),
-
+            */
             uv_buffer: Buffer::new(gl.clone(), Gl::ARRAY_BUFFER),
             vertex_buffer: Buffer::new(gl.clone(), Gl::ARRAY_BUFFER),
             index_buffer: Buffer::new(gl.clone(), Gl::ARRAY_BUFFER),
@@ -52,16 +38,7 @@ impl Sprites {
         }
     }
 
-    pub fn add(&mut self, position: Vec2<f32>) {
-        self.positions.push(position);
-        self.transforms.push(Transform {
-            up: Vec2::new(0.0, 0.5),
-            right: Vec2::new(0.5, 0.0),
-        });
-
-        self.needs_resize = true;
-    }
-
+    /*
     pub fn rotate(&mut self, sprite: Sprite, angle: Radians) {
         let mut transform = &mut self.transforms[sprite as usize];
 
@@ -74,6 +51,7 @@ impl Sprites {
 
         *position = *position + delta;
     }
+    */
 
     fn resize_buffers(&mut self) {
         if !self.needs_resize {
@@ -111,7 +89,7 @@ impl Sprites {
     }
 
     pub fn len(&self) -> usize {
-        self.positions.len()
+        0
     }
 
     pub fn apply(&mut self) {
@@ -120,15 +98,13 @@ impl Sprites {
         let len = self.len();
 
         let Sprites {
-            ref mut transforms,
-            ref mut positions,
             ref mut vertex_buffer,
             ref mut index_buffer,
             ref mut texcoords_buffer,
             ..
         } = self;
 
-        let vertices = vertex_buffer.bind();
+        /*
         for (i, (t, p)) in transforms.iter_mut().zip(positions.iter_mut()).enumerate() {
             let verts = t.vertices(p);
 
@@ -136,6 +112,7 @@ impl Sprites {
 
             vertices.update_sub_vec2(&verts, offset as u32);
         }
+        */
 
         let indices = index_buffer.bind();
         for i in 0..len {

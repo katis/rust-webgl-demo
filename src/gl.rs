@@ -1,15 +1,110 @@
+use anyhow::Result;
 use js_sys::{Float32Array, Uint16Array};
 use std::mem;
 use std::slice;
-use vek::{Vec2, Vec3};
+use vek::{Mat4, Vec2, Vec3};
 use web_sys::{
     HtmlImageElement, WebGlBuffer, WebGlProgram, WebGlRenderingContext, WebGlShader, WebGlTexture,
+    WebGlUniformLocation,
 };
 
+use std::marker::PhantomData;
 use std::rc::Rc;
 use wasm_bindgen::__rt::core::ops::Deref;
 
 pub type Gl = WebGlRenderingContext;
+
+// Typed Buffer
+
+pub struct TypedBuffer<T> {
+    gl: Rc<Gl>,
+    kind: u32,
+    usage: u32,
+    size: i32,
+    buffer: WebGlBuffer,
+    _type: PhantomData<T>,
+}
+
+impl<T> TypedBuffer<T> {
+    pub fn new(gl: Rc<Gl>, kind: u32, usage: u32, size: i32) -> Self {
+        let buffer = buffer_of_size(&gl, kind, usage, size * mem::size_of::<T>() as i32);
+        TypedBuffer {
+            gl,
+            kind,
+            usage,
+            size,
+            buffer,
+            _type: PhantomData,
+        }
+    }
+
+    pub fn resize(&mut self, size: i32) {
+        let size_bytes = size * mem::size_of::<T>() as i32;
+
+        self.buffer = buffer_of_size(&self.gl, self.kind, self.usage, size_bytes);
+        self.size = size;
+    }
+
+    pub fn bind(&mut self) -> BoundTypedBuffer<T> {
+        self.gl.bind_buffer(self.kind, Some(self.buffer.as_ref()));
+
+        BoundTypedBuffer {
+            gl: &self.gl,
+            size: self.size,
+            kind: self.kind,
+            usage: self.usage,
+            _type: PhantomData,
+        }
+    }
+}
+
+fn buffer_of_size(gl: &Gl, kind: u32, usage: u32, size_bytes: i32) -> WebGlBuffer {
+    let raw_buffer = gl.create_buffer().expect("should create buffer");
+
+    gl.bind_buffer(kind, Some(raw_buffer.as_ref()));
+
+    gl.buffer_data_with_i32(kind, size_bytes, usage);
+
+    raw_buffer
+}
+
+pub struct BoundTypedBuffer<'a, T> {
+    gl: &'a Gl,
+    size: i32,
+    kind: u32,
+    usage: u32,
+    _type: PhantomData<T>,
+}
+
+impl<'a, T> BoundTypedBuffer<'a, T> {
+    pub fn update(&mut self, data: &[T]) {
+        unsafe {
+            let raw_data =
+                slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * mem::size_of::<T>());
+            self.gl
+                .buffer_data_with_u8_array(self.kind, raw_data, self.usage);
+        }
+    }
+
+    pub fn update_sub(&mut self, data: &[T], offset: i32) {
+        if data.len() as i32 + offset > self.size {
+            panic!(
+                "Buffer too small, {} + {} > {}",
+                data.len(),
+                offset,
+                self.size
+            );
+        }
+        unsafe {
+            let raw_data =
+                slice::from_raw_parts(data.as_ptr() as *const u8, data.len() * mem::size_of::<T>());
+
+            let offset = offset * mem::size_of::<T>() as i32;
+            self.gl
+                .buffer_sub_data_with_i32_and_u8_array(self.kind, offset, raw_data);
+        }
+    }
+}
 
 // Buffer
 
@@ -61,6 +156,12 @@ impl<'a> BoundBuffer<'a> {
     pub fn update_f32(&self, data: &[f32], usage: u32) {
         unsafe {
             self.update(data, usage);
+        }
+    }
+
+    pub fn update_mat4(&self, vectors: &[Mat4<f32>], usage: u32) {
+        unsafe {
+            self.update(vectors, usage);
         }
     }
 
@@ -133,6 +234,10 @@ impl Program {
         self.gl.use_program(Some(&self.program));
     }
 
+    pub fn get_uniform_location(&self, name: &str) -> Option<WebGlUniformLocation> {
+        self.gl.get_uniform_location(&self.program, name)
+    }
+
     pub fn get_attrib_location(&self, name: &str) -> u32 {
         self.gl.get_attrib_location(&self.program, name) as u32
     }
@@ -186,9 +291,12 @@ impl Drop for Shader {
 
 // Image
 
+#[derive(Clone)]
 pub struct Image {
     gl: Rc<Gl>,
-    texture: WebGlTexture,
+    pub width: u16,
+    pub height: u16,
+    texture: Rc<WebGlTexture>,
 }
 
 impl Image {
@@ -210,9 +318,20 @@ impl Image {
 
         gl.bind_texture(Gl::TEXTURE_2D, None);
 
-        Image { gl, texture }
+        let width = element.natural_width() as u16;
+        let height = element.natural_height() as u16;
+
+        Image {
+            gl,
+            width,
+            height,
+            texture: Rc::new(texture),
+        }
     }
 }
+
+unsafe impl Send for Image {}
+unsafe impl Sync for Image {}
 
 impl std::ops::Deref for Image {
     type Target = WebGlTexture;
