@@ -67,7 +67,7 @@ impl Transform {
 #[derive(Debug)]
 struct Vertex {
     vertex: Vec2<f32>,
-    texcoord: Vec2<f32>,
+    texcoord: Vec2<u16>,
 }
 
 #[repr(C)]
@@ -79,19 +79,19 @@ impl VertexData {
         VertexData([
             Vertex {
                 vertex: position - right + up,
-                texcoord: Vec2::new(0.0f32, 0.0),
+                texcoord: Vec2::new(0, 0),
             },
             Vertex {
                 vertex: position + right + up,
-                texcoord: Vec2::new(1.0f32, 0.0),
+                texcoord: Vec2::new(std::u16::MAX, 0),
             },
             Vertex {
                 vertex: position - right - up,
-                texcoord: Vec2::new(0.0f32, 1.0),
+                texcoord: Vec2::new(0, std::u16::MAX),
             },
             Vertex {
                 vertex: position + right - up,
-                texcoord: Vec2::new(1.0f32, 1.0),
+                texcoord: Vec2::new(std::u16::MAX, std::u16::MAX),
             },
         ])
     }
@@ -366,8 +366,8 @@ impl SpriteBatch {
         self.gl.vertex_attrib_pointer_with_i32(
             self.texcoord_attr,
             2,
-            Gl::FLOAT,
-            false,
+            Gl::UNSIGNED_SHORT,
+            true,
             std::mem::size_of::<Vertex>() as i32,
             std::mem::size_of::<Vec2<f32>>() as i32,
         );
