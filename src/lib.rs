@@ -81,7 +81,7 @@ pub async fn async_start() -> Result<()> {
 
     let mut rng = rand::thread_rng();
 
-    for i in 0..2000 {
+    for i in 0..60000 {
         let x: i32 = rng.gen_range(0, canvas_size.x);
         let y: i32 = rng.gen_range(0, canvas_size.y);
 

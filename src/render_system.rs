@@ -259,6 +259,9 @@ struct SpriteBatch {
 
     vertex_data_buffer: TypedBuffer<VertexData>,
     index_buffer: TypedBuffer<[u16; 6]>,
+
+    vertex_data: Vec<VertexData>,
+    index_data: Vec<[u16; 6]>,
 }
 
 impl SpriteBatch {
@@ -281,6 +284,8 @@ impl SpriteBatch {
                 Gl::DYNAMIC_DRAW,
                 0,
             ),
+            vertex_data: Vec::new(),
+            index_data: Vec::new(),
         }
     }
 
@@ -293,12 +298,16 @@ impl SpriteBatch {
         self.resize_buffers();
 
         let mut vertexdata = self.vertex_data_buffer.bind();
-        for (i, (_, transform, position)) in
-            (&self.entities, transforms, positions).join().enumerate()
-        {
-            let verts = VertexData::new(&position.vector(), transform);
-            vertexdata.update_sub(&[verts], i as i32);
-        }
+        self.vertex_data.clear();
+        self.vertex_data.reserve(self.len as usize);
+
+        let vertices = (&self.entities, transforms, positions)
+            .join()
+            .map(|(_, transform, position)| VertexData::new(&position.vector(), transform));
+
+        self.vertex_data.extend(vertices);
+
+        vertexdata.update_sub(&self.vertex_data, 0);
 
         self.draw(texture_uni);
     }
@@ -312,13 +321,17 @@ impl SpriteBatch {
         self.vertex_data_buffer.resize(self.len);
         self.index_buffer.resize(self.len);
 
-        let mut indices = self.index_buffer.bind();
-        for i in 0..self.len {
-            let n = (i * 4) as u16;
+        self.index_data.clear();
+        self.index_data.reserve(self.len as usize);
 
-            let indexes = [n, n + 1, n + 2, n + 2, n + 3, n + 1];
-            indices.update_sub(&[indexes], i);
-        }
+        let iter = (0..self.len).map(|i| {
+            let n = (i * 4) as u16;
+            [n, n + 1, n + 2, n + 2, n + 3, n + 1]
+        });
+        self.index_data.extend(iter);
+
+        let mut indices = self.index_buffer.bind();
+        indices.update_sub(&self.index_data, 0);
     }
 
     fn add(&mut self, entity: u32) {
