@@ -1,7 +1,6 @@
 use crate::assets::{ImageId, Images};
 use crate::components::Position;
 use crate::gl::{Buffer, Gl, Image, Program, Shader, TypedBuffer};
-use crate::sprites::Sprites;
 use shrev::EventChannel;
 use specs::prelude::*;
 use specs::{SystemData, WriteStorage};
@@ -57,6 +56,11 @@ impl Transform {
             Vec2::new(image.width as f32 / 2., 0.),
         )
     }
+
+    pub fn rotate(&mut self, radians: f32) {
+        self.up.rotate_z(radians);
+        self.right.rotate_z(radians);
+    }
 }
 
 #[repr(C)]
@@ -74,19 +78,19 @@ impl VertexData {
     fn new(position: &Vec2<f32>, Transform { up, right }: &Transform) -> Self {
         VertexData([
             Vertex {
-                vertex: position + up - right,
+                vertex: position - right + up,
                 texcoord: Vec2::new(0.0f32, 0.0),
             },
             Vertex {
-                vertex: position + up + right,
+                vertex: position + right + up,
                 texcoord: Vec2::new(1.0f32, 0.0),
             },
             Vertex {
-                vertex: position - up - right,
+                vertex: position - right - up,
                 texcoord: Vec2::new(0.0f32, 1.0),
             },
             Vertex {
-                vertex: position - up + right,
+                vertex: position + right - up,
                 texcoord: Vec2::new(1.0f32, 1.0),
             },
         ])

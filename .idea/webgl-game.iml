@@ -63,6 +63,8 @@
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/bitflags-8a85dbf443009af5/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/parking_lot-9959fa5d32278011/out" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/target/debug/build/parking_lot_core-8175c969e8733d9d/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/getrandom-70ffc73d1f746cc8/out" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/getrandom-1359223c247a05eb/out" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

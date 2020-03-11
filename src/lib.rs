@@ -9,6 +9,8 @@ use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
 use web_sys::{console, HtmlImageElement, WebGlRenderingContext};
 
+use rand::Rng;
+
 use crate::assets::Images;
 use crate::components::Position;
 use crate::data::Size;
@@ -22,6 +24,7 @@ mod assets;
 mod components;
 mod data;
 mod gl;
+mod move_system;
 mod render_system;
 mod sprites;
 
@@ -50,6 +53,7 @@ pub async fn async_start() -> Result<()> {
 
     let canvas = doc.get_element_by_id("view").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into().unwrap();
+    let mut canvas_size = get_canvas_size(&canvas);
 
     let context: WebGlRenderingContext = canvas
         .get_context("webgl")
@@ -75,21 +79,21 @@ pub async fn async_start() -> Result<()> {
         .fetch_mut::<EventChannel<DisplayEvent>>()
         .register_reader();
 
-    world
-        .create_entity()
-        .with(Position::new(100., 0.))
-        .with(Transform::from_image(&image))
-        .with(Sprite::from_image(id))
-        .build();
+    let mut rng = rand::thread_rng();
 
-    world
-        .create_entity()
-        .with(Position::new(100., 200.))
-        .with(Transform::from_image(&image))
-        .with(Sprite::from_image(id))
-        .build();
+    for i in 0..2000 {
+        let x: i32 = rng.gen_range(0, canvas_size.x);
+        let y: i32 = rng.gen_range(0, canvas_size.y);
 
-    let mut canvas_size = get_canvas_size(&canvas);
+        world
+            .create_entity()
+            .with(Position::new(x as f32, y as f32))
+            .with(Transform::from_image(&image))
+            .with(Sprite::from_image(id))
+            .build();
+    }
+
+    let mut move_system = move_system::MoveSystem;
 
     let mut render_system = RenderSystem::new(
         gl.clone(),
@@ -106,6 +110,7 @@ pub async fn async_start() -> Result<()> {
             chan.single_write(DisplayEvent::Resized(new_size));
             canvas_size = new_size;
         }
+        move_system.run_now(&mut world);
         render_system.run_now(&mut world);
         world.maintain();
 
