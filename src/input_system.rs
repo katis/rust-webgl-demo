@@ -13,6 +13,9 @@ pub enum InputEvent {
     MouseUp,
 }
 
+#[derive(Default, Debug)]
+pub struct BunnyCount(pub u32);
+
 pub struct InputSystem {
     input_reader: ReaderId<InputEvent>,
     images: Rc<Images>,
@@ -38,11 +41,15 @@ impl<'a> System<'a> for InputSystem {
     type SystemData = (
         Entities<'a>,
         Read<'a, WindowSize>,
+        Write<'a, BunnyCount>,
         Read<'a, EventChannel<InputEvent>>,
         Read<'a, LazyUpdate>,
     );
 
-    fn run(&mut self, (entities, window_size, mut input_events, updater): Self::SystemData) {
+    fn run(
+        &mut self,
+        (entities, window_size, mut bunny_count, mut input_events, updater): Self::SystemData,
+    ) {
         {
             let events = input_events.read(&mut self.input_reader);
             for event in events {
@@ -62,15 +69,19 @@ impl<'a> System<'a> for InputSystem {
             let size = window_size.size;
             let image = self.images.image(self.bunny_image_id).unwrap();
 
-            for _ in 0..5 {
+            let count = 20;
+
+            for _ in 0..count {
                 let bunny = entities.create();
                 let angle: f32 = rng.gen_range(-std::f32::consts::PI / 2., 0.);
                 let velocity: f32 = rng.gen_range(0.1, 10.);
-                updater.insert(bunny, Position::new(10., size.y as f32 - 10.));
+                let x = rng.gen_range(10., 150.);
+                updater.insert(bunny, Position::new(x, size.y as f32 - 10.));
                 updater.insert(bunny, Velocity::from_angle(angle, velocity));
                 updater.insert(bunny, Transform::from_image(image));
                 updater.insert(bunny, Sprite::from_image(self.bunny_image_id));
             }
+            bunny_count.0 += count;
         }
     }
 }

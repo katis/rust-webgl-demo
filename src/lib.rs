@@ -7,7 +7,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::spawn_local;
-use web_sys::{console, HtmlImageElement, WebGlRenderingContext};
+use web_sys::{console, HtmlElement, HtmlImageElement, WebGlRenderingContext};
 
 use rand::Rng;
 
@@ -43,11 +43,11 @@ fn request_animation_frame(closure: &Closure<dyn FnMut()>) {
 }
 
 #[wasm_bindgen]
-pub fn start() {
-    spawn_local(async { async_start().await.unwrap() })
+pub fn start(counter_el: HtmlElement) {
+    spawn_local(async { async_start(counter_el).await.unwrap() })
 }
 
-pub async fn async_start() -> Result<()> {
+pub async fn async_start(counter_el: HtmlElement) -> Result<()> {
     crate::utils::set_panic_hook();
 
     let frame = Rc::new(RefCell::new(None));
@@ -58,8 +58,6 @@ pub async fn async_start() -> Result<()> {
     let canvas = doc.get_element_by_id("view").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into().unwrap();
     let mut canvas_size = get_canvas_size(&canvas);
-
-    console_log!("SIZE: {}", canvas_size);
 
     let context: WebGlRenderingContext = canvas
         .get_context("webgl")
@@ -76,6 +74,8 @@ pub async fn async_start() -> Result<()> {
 
         game.process_events();
         game.run_world(new_size);
+
+        counter_el.set_inner_text(&format!("Bunnies: {}", game.bunny_count()));
 
         request_animation_frame(frame.borrow().as_ref().unwrap());
     }) as Box<dyn FnMut()>));

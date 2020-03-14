@@ -1,7 +1,7 @@
 use crate::assets::{ImageId, Images};
 use crate::components::{Position, Velocity};
 use crate::gl::Gl;
-use crate::input_system::{InputEvent, InputSystem};
+use crate::input_system::{BunnyCount, InputEvent, InputSystem};
 use crate::move_system::MoveSystem;
 use crate::render_system::{DisplayEvent, RenderSystem, Sprite, Transform, WindowSize};
 use anyhow::Result;
@@ -47,6 +47,10 @@ impl Game {
         self.dom_event_handlers.process_input(&mut channel);
     }
 
+    pub fn bunny_count(&self) -> u32 {
+        self.world.fetch::<BunnyCount>().0
+    }
+
     pub fn run_world(&mut self, canvas_size: Vec2<i32>) {
         {
             let mut window_size = self.world.fetch_mut::<WindowSize>();
@@ -75,6 +79,7 @@ fn init_world(canvas_size: Vec2<i32>, images: &Images) -> World {
     world.insert(EventChannel::<DisplayEvent>::new());
     world.insert(EventChannel::<InputEvent>::new());
     world.insert(WindowSize { size: canvas_size });
+    world.insert(BunnyCount(3));
 
     let mut rng = rand::thread_rng();
 
