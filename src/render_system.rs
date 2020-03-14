@@ -18,6 +18,11 @@ pub enum DisplayEvent {
     Resized(Vec2<i32>),
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WindowSize {
+    pub size: Vec2<i32>,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Sprite {
     batch_id: u32,
@@ -26,7 +31,7 @@ pub struct Sprite {
 impl Sprite {
     pub fn from_image(image_id: ImageId) -> Self {
         Sprite {
-            batch_id: image_id.0,
+            batch_id: image_id.id,
         }
     }
 }
@@ -76,21 +81,25 @@ struct VertexData([Vertex; 4]);
 
 impl VertexData {
     fn new(position: &Vec2<f32>, Transform { up, right }: &Transform) -> Self {
+        let v1 = position - right + up;
+        let v2 = position + right + up;
+        let v3 = position - right - up;
+        let v4 = position + right - up;
         VertexData([
             Vertex {
-                vertex: position - right + up,
+                vertex: v1,
                 texcoord: Vec2::new(0, 0),
             },
             Vertex {
-                vertex: position + right + up,
+                vertex: v2,
                 texcoord: Vec2::new(std::u16::MAX, 0),
             },
             Vertex {
-                vertex: position - right - up,
+                vertex: v3,
                 texcoord: Vec2::new(0, std::u16::MAX),
             },
             Vertex {
-                vertex: position + right - up,
+                vertex: v4,
                 texcoord: Vec2::new(std::u16::MAX, std::u16::MAX),
             },
         ])
@@ -99,12 +108,9 @@ impl VertexData {
 
 pub struct RenderSystem {
     gl: Rc<Gl>,
-    images: Images,
 
     component_reader: ReaderId<ComponentEvent>,
     display_reader: ReaderId<DisplayEvent>,
-    inserted: BitSet,
-    removed: BitSet,
 
     batches: Vec<SpriteBatch>,
 
@@ -112,12 +118,13 @@ pub struct RenderSystem {
     program: Program,
     projection_uni: WebGlUniformLocation,
     texture_uni: WebGlUniformLocation,
+    window_size: Vec2<i32>,
 }
 
 impl RenderSystem {
     pub fn new(
         gl: Rc<Gl>,
-        images: Images,
+        images: &Images,
         component_reader: ReaderId<ComponentEvent>,
         display_reader: ReaderId<DisplayEvent>,
         canvas_size: Vec2<i32>,
@@ -148,14 +155,12 @@ impl RenderSystem {
             component_reader,
             display_reader,
 
-            images,
             batches,
-            inserted: BitSet::new(),
-            removed: BitSet::new(),
             camera,
             program,
             projection_uni,
             texture_uni,
+            window_size: canvas_size,
         }
     }
 }
@@ -173,8 +178,12 @@ fn camera_mat(size: Vec2<i32>) -> Mat4<f32> {
 
 impl RenderSystem {
     fn resize(&mut self, size: Vec2<i32>) {
-        self.gl.viewport(0, 0, size.x, size.y);
+        if self.window_size == size {
+            return;
+        }
+        self.window_size = size;
 
+        self.gl.viewport(0, 0, size.x, size.y);
         self.camera = camera_mat(size);
     }
 }
@@ -185,16 +194,13 @@ impl<'a> System<'a> for RenderSystem {
         ReadStorage<'a, Sprite>,
         ReadStorage<'a, Transform>,
         ReadStorage<'a, Position>,
-        Read<'a, EventChannel<DisplayEvent>>,
+        Read<'a, WindowSize>,
     );
 
     fn run(
         &mut self,
-        (entities, mut sprites, transforms, positions, mut display_events): Self::SystemData,
+        (entities, mut sprites, transforms, positions, mut window_size): Self::SystemData,
     ) {
-        self.inserted.clear();
-        self.removed.clear();
-
         {
             let events = sprites.channel().read(&mut self.component_reader);
             for event in events {
@@ -216,16 +222,7 @@ impl<'a> System<'a> for RenderSystem {
             }
         }
 
-        {
-            let events = display_events.read(&mut self.display_reader);
-            for event in events {
-                match event {
-                    &DisplayEvent::Resized(size) => {
-                        self.resize(size);
-                    }
-                }
-            }
-        }
+        self.resize(window_size.size);
 
         self.gl.disable(Gl::DEPTH_TEST);
         self.gl.enable(Gl::BLEND);
