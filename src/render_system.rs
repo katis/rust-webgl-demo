@@ -110,7 +110,6 @@ pub struct RenderSystem {
     gl: Rc<Gl>,
 
     component_reader: ReaderId<ComponentEvent>,
-    display_reader: ReaderId<DisplayEvent>,
 
     batches: Vec<SpriteBatch>,
 
@@ -122,13 +121,9 @@ pub struct RenderSystem {
 }
 
 impl RenderSystem {
-    pub fn new(
-        gl: Rc<Gl>,
-        images: &Images,
-        component_reader: ReaderId<ComponentEvent>,
-        display_reader: ReaderId<DisplayEvent>,
-        canvas_size: Vec2<i32>,
-    ) -> Self {
+    pub fn new(gl: Rc<Gl>, images: &Images, world: &World, canvas_size: Vec2<i32>) -> Self {
+        let component_reader = WriteStorage::<Sprite>::fetch(&world).register_reader();
+
         let program = {
             let vert = Shader::compile(gl.clone(), Gl::VERTEX_SHADER, VERT);
             let frag = Shader::compile(gl.clone(), Gl::FRAGMENT_SHADER, FRAG);
@@ -153,7 +148,6 @@ impl RenderSystem {
         RenderSystem {
             gl,
             component_reader,
-            display_reader,
 
             batches,
             camera,
@@ -177,7 +171,7 @@ fn camera_mat(size: Vec2<i32>) -> Mat4<f32> {
 }
 
 impl RenderSystem {
-    fn resize(&mut self, size: Vec2<i32>) {
+    pub fn resize(&mut self, size: Vec2<i32>) {
         if self.window_size == size {
             return;
         }

@@ -17,15 +17,22 @@
 
         body {
             display: flex;
-            flex-direction: column;
             justify-content: center;
+            align-items: center;
+        }
+
+        .canvas {
+            width: 800px;
+            height: 600px;
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
     <script defer type="module">
         import init, { start } from './pkg/webgl_game.js';
 
         const canvas = document.getElementById('view');
 
+        /*
         const ratio = 16 / 9;
 
         function setCanvasSize() {
@@ -36,13 +43,13 @@
         window.addEventListener("resize", setCanvasSize);
 
         setCanvasSize();
+         */
 
         init().then(start);
     </script>
 </head>
-<img>
 
-<canvas id="view"></canvas>
+<canvas id="view" class="canvas" width="800px" height="600"></canvas>
 
 </body>
 </html>

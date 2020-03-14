@@ -21,11 +21,10 @@ pub struct InputSystem {
 }
 
 impl InputSystem {
-    pub fn new(
-        images: Rc<Images>,
-        input_reader: ReaderId<InputEvent>,
-        bunny_image: ImageId,
-    ) -> Self {
+    pub fn new(images: Rc<Images>, world: &mut World, bunny_image: ImageId) -> Self {
+        let input_reader = world
+            .fetch_mut::<EventChannel<InputEvent>>()
+            .register_reader();
         InputSystem {
             images,
             input_reader,
@@ -62,14 +61,16 @@ impl<'a> System<'a> for InputSystem {
             let mut rng = rand::thread_rng();
             let size = window_size.size;
             let image = self.images.image(self.bunny_image_id).unwrap();
-            let bunny = entities.create();
-            updater.insert(bunny, Position::new(10., size.y as f32 - 10.));
-            updater.insert(
-                bunny,
-                Velocity::from_angle(rng.gen_range(-std::f32::consts::PI, 0.), 4.),
-            );
-            updater.insert(bunny, Transform::from_image(image));
-            updater.insert(bunny, Sprite::from_image(self.bunny_image_id));
+
+            for _ in 0..5 {
+                let bunny = entities.create();
+                let angle: f32 = rng.gen_range(-std::f32::consts::PI / 2., 0.);
+                let velocity: f32 = rng.gen_range(0.1, 10.);
+                updater.insert(bunny, Position::new(10., size.y as f32 - 10.));
+                updater.insert(bunny, Velocity::from_angle(angle, velocity));
+                updater.insert(bunny, Transform::from_image(image));
+                updater.insert(bunny, Sprite::from_image(self.bunny_image_id));
+            }
         }
     }
 }
